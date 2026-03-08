@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: agrisense_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=adminpassword
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: agrisense_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://admin:adminpassword@mongodb:27017/?authSource=admin
+      - JWT_SECRET=supersecretjwtkey_agrisense
+      - AI_SERVICE_URL=http://ai-service:8001
+    depends_on:
+      - mongodb
+    volumes:
+      - ./backend:/app
+    restart: always
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: agrisense_ai_service
+    ports:
+      - "8001:8001"
+    environment:
+      - AI_MODEL_PATH=/app/models
+    volumes:
+      - ./ai-service:/app
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: agrisense_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  mongodb_data:
